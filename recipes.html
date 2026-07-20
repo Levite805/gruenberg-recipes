@@ -384,7 +384,7 @@ html.dark .toast { background: #EDEAE4; color: #1C1C1C; }
         <input type="search" id="search" placeholder="Search recipes…" autocomplete="off" spellcheck="false">
       </div>
       <div class="header-controls">
-        <button class="dark-toggle" id="darkToggle" aria-label="Dark Mode Off">
+        <button class="dark-toggle" id="darkToggle" aria-label="Dark Mode Off" title="Dark Mode Off">
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
           </svg>
@@ -396,7 +396,7 @@ html.dark .toast { background: #EDEAE4; color: #1C1C1C; }
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
         </button>
-        <button class="wake-toggle" id="wakeToggle" aria-label="Keep Awake Off">
+        <button class="wake-toggle" id="wakeToggle" aria-label="Keep Awake Off" title="Keep Awake Off">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
             <circle cx="12" cy="12" r="3"/>
@@ -738,13 +738,17 @@ document.getElementById('search').addEventListener('input', e => {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = saved === 'dark' || (!saved && prefersDark);
   if (isDark) document.documentElement.classList.add('dark');
-  document.getElementById('darkToggle').setAttribute('aria-label', isDark ? 'Dark Mode On' : 'Dark Mode Off');
+  const label = isDark ? 'Dark Mode On' : 'Dark Mode Off';
+  document.getElementById('darkToggle').setAttribute('aria-label', label);
+  document.getElementById('darkToggle').setAttribute('title', label);
 })();
 
 document.getElementById('darkToggle').addEventListener('click', () => {
   const isDark = document.documentElement.classList.toggle('dark');
   localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  document.getElementById('darkToggle').setAttribute('aria-label', isDark ? 'Dark Mode On' : 'Dark Mode Off');
+  const label = isDark ? 'Dark Mode On' : 'Dark Mode Off';
+  document.getElementById('darkToggle').setAttribute('aria-label', label);
+  document.getElementById('darkToggle').setAttribute('title', label);
 });
 
 // ── UTILITIES
@@ -764,11 +768,13 @@ async function requestWakeLock() {
     const btn = document.getElementById('wakeToggle');
     btn.classList.add('active');
     btn.setAttribute('aria-label', 'Keep Awake On');
+    btn.setAttribute('title', 'Keep Awake On');
     wakeLock.addEventListener('release', () => {
       wakeLock = null;
       const b = document.getElementById('wakeToggle');
       b.classList.remove('active');
       b.setAttribute('aria-label', 'Keep Awake Off');
+      b.setAttribute('title', 'Keep Awake Off');
     });
   } catch (e) { /* not supported or denied */ }
 }
@@ -777,6 +783,7 @@ function releaseWakeLock() {
   const btn = document.getElementById('wakeToggle');
   btn.classList.remove('active');
   btn.setAttribute('aria-label', 'Keep Awake Off');
+  btn.setAttribute('title', 'Keep Awake Off');
 }
 document.getElementById('wakeToggle').addEventListener('click', () => {
   if (wakeLock) { releaseWakeLock(); } else { requestWakeLock(); }
