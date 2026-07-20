@@ -22,6 +22,10 @@ What it does:
   1. Loads categories.json (the durable "which category does this recipe
      belong in" cache -- category can't be reliably derived from the raw
      1Password data alone, so once a human/Claude assigns one it's kept).
+  1b. Loads photos.json (the durable uuid -> featured-photo-filename cache.
+     1Password itself never supplies these; a photo is only ever added by
+     dropping a file in the repo and adding an entry here, so it survives
+     every daily sync unchanged).
   2. Derives every other field automatically from the raw item data.
   3. Rebuilds the RECIPES array and rewrites it into recipes.html and
      index.html (only touches the `const RECIPES = [...]` line).
@@ -32,7 +36,10 @@ What it does:
      git commit/push.
 
 Edit categories.json to correct a guessed category, then re-run --
-the correction sticks permanently.
+the correction sticks permanently. Edit photos.json (uuid -> filename in
+the repo root, e.g. "pork-tenderloin.jpg") to attach or change a
+recipe's featured photo -- shown as the card background on the table
+view and at the top of the recipe modal.
 """
 import json
 import re
@@ -41,6 +48,7 @@ from pathlib import Path
 
 REPO = Path(__file__).parent
 CATEGORIES_FILE = REPO / "categories.json"
+PHOTOS_FILE = REPO / "photos.json"
 RAW_JSON_FILE = REPO / "recipes.json"
 REVIEW_FILE = REPO / "NEW_RECIPES_REVIEW.md"
 HTML_FILES = [REPO / "recipes.html", REPO / "index.html"]
@@ -146,7 +154,7 @@ def derive_attribution_and_preview(notes: str):
     return "", ""
 
 
-def build_recipe(item: dict, categories: dict, review: list) -> dict:
+def build_recipe(item: dict, categories: dict, review: list, photos: dict) -> dict:
     uuid = item["uuid"]
     overview = item.get("overview", {})
     details = item.get("details", {})
@@ -184,6 +192,8 @@ def build_recipe(item: dict, categories: dict, review: list) -> dict:
     }
     if item.get("image"):
         recipe["image"] = item["image"]
+    if uuid in photos:
+        recipe["photo"] = photos[uuid]
     return recipe
 
 
@@ -199,11 +209,15 @@ def main():
     if CATEGORIES_FILE.exists():
         categories = json.loads(CATEGORIES_FILE.read_text(encoding="utf-8"))
 
+    photos = {}
+    if PHOTOS_FILE.exists():
+        photos = json.loads(PHOTOS_FILE.read_text(encoding="utf-8"))
+
     seen_uuids = {item["uuid"] for item in raw_items}
     removed = [c["title"] for u, c in categories.items() if u not in seen_uuids]
 
     review = []
-    by_uuid = {item["uuid"]: build_recipe(item, categories, review) for item in raw_items}
+    by_uuid = {item["uuid"]: build_recipe(item, categories, review, photos) for item in raw_items}
 
     # Preserve the existing display order (read from the current HTML) so a
     # sync doesn't reshuffle every category on the live site. Recipes that
@@ -227,8 +241,10 @@ def main():
     )
     recipes = [by_uuid[u] for u in ordered_uuids + new_uuids]
 
-    # Drop categories.json entries for recipes no longer in the vault.
+    # Drop categories.json / photos.json entries for recipes no longer in
+    # the vault.
     categories = {u: c for u, c in categories.items() if u in seen_uuids}
+    photos = {u: p for u, p in photos.items() if u in seen_uuids}
 
     new_json = json.dumps(recipes, ensure_ascii=False, separators=(", ", ": "))
 
@@ -248,6 +264,10 @@ def main():
 
     CATEGORIES_FILE.write_text(
         json.dumps(categories, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    PHOTOS_FILE.write_text(
+        json.dumps(photos, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",
     )
     RAW_JSON_FILE.write_text(
