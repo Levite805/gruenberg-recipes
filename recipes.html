@@ -276,11 +276,8 @@ main {
   overflow: hidden; border: 1px solid var(--border);
   background: var(--chip-bg);
 }
-.photo-carousel .carousel-track {
-  display: flex; transition: transform 0.25s ease;
-}
 .photo-carousel .carousel-slide {
-  flex: 0 0 100%; width: 100%;
+  width: 100%;
 }
 .photo-carousel .carousel-slide img {
   width: 100%; display: block;
@@ -946,9 +943,6 @@ function openModal(r) {
   if (photoList.length) {
     carousel.style.display = 'block';
     const multi = photoList.length > 1;
-    track.innerHTML = photoList.map(src =>
-      `<div class="carousel-slide"><img src="${src}" alt="${escHtml(r.title)} photo"></div>`
-    ).join('');
     dotsEl.innerHTML = multi
       ? photoList.map((_, i) => `<button class="carousel-dot" data-i="${i}" aria-label="Photo ${i + 1} of ${photoList.length}"></button>`).join('')
       : '';
@@ -956,9 +950,13 @@ function openModal(r) {
     nextBtn.style.display = multi ? 'flex' : 'none';
 
     let idx = 0;
+    // Only the active photo is rendered at a time (rather than all photos
+    // side-by-side in a sliding track) so the carousel box always sizes
+    // itself to that photo's natural aspect ratio -- no leftover gray
+    // space from a taller/shorter sibling photo.
     const showSlide = i => {
       idx = (i + photoList.length) % photoList.length;
-      track.style.transform = `translateX(-${idx * 100}%)`;
+      track.innerHTML = `<div class="carousel-slide"><img src="${photoList[idx]}" alt="${escHtml(r.title)} photo"></div>`;
       dotsEl.querySelectorAll('.carousel-dot').forEach((dot, di) => dot.classList.toggle('active', di === idx));
     };
     prevBtn.onclick = () => showSlide(idx - 1);
