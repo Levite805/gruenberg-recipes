@@ -255,6 +255,8 @@ def main():
         encoding="utf-8",
     )
 
+    # Always overwrite (never delete) this file -- some environments this
+    # script runs in restrict unlinking files, but overwriting is fine.
     if review or removed:
         lines = ["# Recipe sync review\n"]
         if review:
@@ -268,8 +270,11 @@ def main():
             for title in removed:
                 lines.append(f"- {title}")
         REVIEW_FILE.write_text("\n".join(lines), encoding="utf-8")
-    elif REVIEW_FILE.exists():
-        REVIEW_FILE.unlink()
+    else:
+        REVIEW_FILE.write_text(
+            "# Recipe sync review\n\nNothing needs review as of the last sync.\n",
+            encoding="utf-8",
+        )
 
     print("CHANGED" if changed else "UNCHANGED")
     if review:
