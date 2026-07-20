@@ -212,10 +212,11 @@ main {
 .modal-header {
   position: sticky; top: 0; background: var(--surface);
   padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  display: flex; align-items: flex-start; gap: 12px;
   z-index: 1;
 }
 .modal-header-meta { flex: 1; min-width: 0; }
+.modal-header-actions { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
 .modal-title {
   font-size: 1.2rem; font-weight: 700; color: var(--text);
   letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 8px;
@@ -433,19 +434,21 @@ html.dark .toast { background: #EDEAE4; color: #1C1C1C; }
         <div class="modal-title" id="modalTitle"></div>
         <div class="modal-badges" id="modalBadges"></div>
       </div>
-      <button class="share-btn" id="shareBtn" aria-label="Share recipe">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-        </svg>
-        Share
-      </button>
-      <button class="close-btn" id="closeBtn" aria-label="Close">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M1 1l12 12M13 1L1 13"/>
-        </svg>
-      </button>
+      <div class="modal-header-actions">
+        <button class="share-btn" id="shareBtn" aria-label="Share recipe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share
+        </button>
+        <button class="close-btn" id="closeBtn" aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M1 1l12 12M13 1L1 13"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div class="modal-body">
       <img id="modalImage" class="recipe-image" style="display:none" alt="Recipe reference image">
@@ -804,14 +807,29 @@ document.getElementById('shareBtn').addEventListener('click', async () => {
   if (navigator.share) {
     try { await navigator.share({ title, url }); } catch (e) { /* cancelled */ }
   } else {
-    try {
-      await navigator.clipboard.writeText(url);
+    function showCopied() {
       const btn = document.getElementById('shareBtn');
       const orig = btn.innerHTML;
       btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
       setTimeout(() => { btn.innerHTML = orig; }, 2000);
-    } catch (e) {
-      prompt('Copy this link:', url);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showCopied();
+      } catch (e) {
+        prompt('Copy this link:', url);
+      }
+    } else {
+      /* execCommand fallback for Firefox and older browsers */
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); showCopied(); }
+      catch (e) { prompt('Copy this link:', url); }
+      document.body.removeChild(ta);
     }
   }
 });
