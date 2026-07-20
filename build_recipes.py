@@ -22,10 +22,13 @@ What it does:
   1. Loads categories.json (the durable "which category does this recipe
      belong in" cache -- category can't be reliably derived from the raw
      1Password data alone, so once a human/Claude assigns one it's kept).
-  1b. Loads photos.json (the durable uuid -> featured-photo-filename cache.
+  1b. Loads photos.json (the durable uuid -> featured-photo-filename(s) cache.
      1Password itself never supplies these; a photo is only ever added by
      dropping a file in the repo and adding an entry here, so it survives
-     every daily sync unchanged).
+     every daily sync unchanged). Each entry can be a single filename string
+     (one photo) or a JSON array of filenames (multiple photos -- rendered
+     as a carousel in the recipe modal). The first photo in the list is
+     always used as the card-grid background image.
   2. Derives every other field automatically from the raw item data.
   3. Rebuilds the RECIPES array and rewrites it into recipes.html and
      index.html (only touches the `const RECIPES = [...]` line).
@@ -37,9 +40,11 @@ What it does:
 
 Edit categories.json to correct a guessed category, then re-run --
 the correction sticks permanently. Edit photos.json (uuid -> filename in
-the repo root, e.g. "pork-tenderloin.jpg") to attach or change a
-recipe's featured photo -- shown as the card background on the table
-view and at the top of the recipe modal.
+the repo root, e.g. "pork-tenderloin.jpg", or a list of filenames, e.g.
+["smoked-brisket.jpg", "smoked-brisket-2.jpg"]) to attach or change a
+recipe's featured photo(s) -- the first is shown as the card background
+on the table view; all of them are shown as a carousel at the top of the
+recipe modal.
 """
 import json
 import re
@@ -193,7 +198,11 @@ def build_recipe(item: dict, categories: dict, review: list, photos: dict) -> di
     if item.get("image"):
         recipe["image"] = item["image"]
     if uuid in photos:
-        recipe["photo"] = photos[uuid]
+        photo_list = photos[uuid]
+        if isinstance(photo_list, str):
+            photo_list = [photo_list]
+        recipe["photos"] = photo_list
+        recipe["photo"] = photo_list[0]
     return recipe
 
 
